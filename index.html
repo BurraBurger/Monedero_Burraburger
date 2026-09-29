@@ -1,71 +1,178 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escáner de Lealtad - Burra Burger</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 15px; background-color: #f4f4f9; }
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; }
-        #resultado { margin-top: 20px; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; display: none; }
-        .exito { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .info { font-size: 14px; margin-top: 5px; font-weight: normal; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BurraBurger - Escáner de Membresía</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f4f4f9;
+      padding: 15px;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 25px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 400px;
+      margin: 20px auto;
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #555;
+    }
+    input[type="text"] {
+      width: 90%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    button {
+      background: #d32f2f;
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #b71c1c;
+    }
+    #reader {
+      width: 100%;
+      margin-top: 15px;
+    }
+    #resultado {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 16px;
+      word-wrap: break-word;
+    }
+    .cliente-activo {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 15px;
+    }
+  </style>
 </head>
 <body>
 
-    <h2>🍔 Escáner de Monedero Burra Burger</h2>
-    <div id="reader"></div>
+  <div class="card">
+    <h2>🍔 BurraBurger</h2>
+
+    <!-- PASO 1: Ingresar Nombre del Cliente -->
+    <div id="paso1">
+      <label for="nombreCliente">Nombre del Cliente:</label>
+      <input type="text" id="nombreCliente" placeholder="Ej. Carlos Pérez" autocomplete="off">
+      <button onclick="iniciarEscaneo()">Continuar a Escanear QR 📷</button>
+    </div>
+
+    <!-- PASO 2: Escanear Tarjeta -->
+    <div id="paso2" style="display: none;">
+      <div id="infoClienteActivo" class="cliente-activo"></div>
+      <p>Apunta la cámara al código QR de la tarjeta</p>
+      <div id="reader"></div>
+      <button onclick="reiniciarPaso1()" style="background: #757575; margin-top: 15px;">⬅️ Cambiar Nombre</button>
+    </div>
+
     <div id="resultado"></div>
+  </div>
 
-    <script>
-        // PEGA AQUÍ LA URL QUE TE DIO APPS SCRIPT:
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2l8jo2lKD2_sS_mR7KAvEwyAGah1qk0ZZU6iCB0vHIXTgdITQinrpQVAQaa7yD4fsZw/exec"; 
+  <script>
+    // ⚠️ REEMPLAZA ESTA URL CON TU LINK DESPLEGADO DE GOOGLE APPS SCRIPT
+    const SCRIPT_URL = "https://script.google.com/macros/s/TU_SCRIPT_ID/exec";
 
-        let escaneando = false;
+    let html5QrcodeScanner = null;
+    let clienteNombreGlobal = "";
+    let escaneando = false;
 
-        function onScanSuccess(decodedText) {
-            if (escaneando) return;
-            escaneando = true;
+    function iniciarEscaneo() {
+      const nombreInput = document.getElementById("nombreCliente").value.trim();
 
-            const divResultado = document.getElementById("resultado");
-            divResultado.style.display = "block";
-            divResultado.className = "info";
-            divResultado.innerHTML = "⏳ Procesando consumo para: " + decodedText + "...";
+      if (nombreInput === "") {
+        alert("Por favor ingresa el nombre del cliente antes de continuar.");
+        return;
+      }
 
-            fetch(APPS_SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({ idTarjeta: decodedText.trim() })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.exito) {
-                    divResultado.className = "exito";
-                    divResultado.innerHTML = `
-                        ${data.mensaje}<br>
-                        <div class="info">
-                            Cliente: <b>${data.cliente}</b><br>
-                            Nuevo Saldo: <b>$${data.nuevoSaldo} MXN</b><br>
-                            Quedan: <b>${data.hamburguesasRestantes} hamburguesas</b>
-                        </div>
-                    `;
-                } else {
-                    divResultado.className = "error";
-                    divResultado.innerHTML = data.mensaje;
-                }
-                setTimeout(() => { escaneando = false; }, 3000); // Espera 3 segundos antes de volver a escanear
-            })
-            .catch(err => {
-                divResultado.className = "error";
-                divResultado.innerHTML = "❌ Error de conexión al servidor.";
-                setTimeout(() => { escaneando = false; }, 3000);
-            });
+      clienteNombreGlobal = nombreInput;
+
+      // Ocultar paso 1 y mostrar paso 2
+      document.getElementById("paso1").style.display = "none";
+      document.getElementById("paso2").style.display = "block";
+      document.getElementById("infoClienteActivo").innerHTML = "👤 Registrando a: <strong>" + clienteNombreGlobal + "</strong>";
+      document.getElementById("resultado").innerHTML = "";
+
+      // Iniciar la cámara para escanear
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+      html5QrcodeScanner.render(onScanSuccess);
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      if (escaneando) return;
+      escaneando = true;
+
+      document.getElementById("resultado").innerHTML = "⏳ Guardando información en el sistema...";
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idTarjeta: decodedText,
+          nuevoNombre: clienteNombreGlobal
+        })
+      })
+      .then(() => {
+        document.getElementById("resultado").innerHTML = 
+          "✅ <strong>¡REGISTRADO!</strong><br>Cliente: " + clienteNombreGlobal + "<br>Tarjeta: " + decodedText;
+
+        // Detener la cámara
+        if (html5QrcodeScanner) {
+          html5QrcodeScanner.clear();
         }
 
-        const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } });
-        html5QrcodeScanner.render(onScanSuccess);
-    </script>
+        setTimeout(() => {
+          reiniciarPaso1();
+        }, 4000);
+      })
+      .catch(err => {
+        document.getElementById("resultado").innerHTML = "❌ Error al conectar con Google Sheets.";
+        escaneando = false;
+      });
+    }
+
+    function reiniciarPaso1() {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear();
+      }
+      escaneando = false;
+      document.getElementById("nombreCliente").value = "";
+      document.getElementById("paso1").style.display = "block";
+      document.getElementById("paso2").style.display = "none";
+      document.getElementById("resultado").innerHTML = "";
+    }
+  </script>
+
 </body>
 </html>
