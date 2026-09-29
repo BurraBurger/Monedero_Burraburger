@@ -128,40 +128,41 @@
       html5QrcodeScanner.render(onScanSuccess);
     }
 
-    function onScanSuccess(decodedText, decodedResult) {
+    
+function onScanSuccess(decodedText, decodedResult) {
       if (escaneando) return;
       escaneando = true;
 
-      document.getElementById("resultado").innerHTML = "⏳ Guardando información en el sistema...";
+      document.getElementById("resultado").innerHTML = "⏳ Guardando en Google Sheets...";
+
+      // Enviar datos usando la estructura que acepta Google Apps Script
+      const datos = new URLSearchParams();
+      datos.append("idTarjeta", decodedText.trim());
+      datos.append("nuevoNombre", clienteNombreGlobal.trim());
 
       fetch(SCRIPT_URL, {
         method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idTarjeta: decodedText,
-          nuevoNombre: clienteNombreGlobal
-        })
+        body: datos
       })
-      .then(() => {
+      .then(response => response.text())
+      .then(respuesta => {
         document.getElementById("resultado").innerHTML = 
-          "✅ <strong>¡REGISTRADO!</strong><br>Cliente: " + clienteNombreGlobal + "<br>Tarjeta: " + decodedText;
+          "✅ <strong>¡REGISTRADO EN HOJA!</strong><br>Cliente: " + clienteNombreGlobal + "<br>ID: " + decodedText;
 
-        // Detener la cámara
         if (html5QrcodeScanner) {
           html5QrcodeScanner.clear();
         }
 
         setTimeout(() => {
           reiniciarPaso1();
-        }, 4000);
+        }, 3000);
       })
       .catch(err => {
         document.getElementById("resultado").innerHTML = "❌ Error al conectar con Google Sheets.";
         escaneando = false;
       });
     }
-
+   
     function reiniciarPaso1() {
       if (html5QrcodeScanner) {
         html5QrcodeScanner.clear();
