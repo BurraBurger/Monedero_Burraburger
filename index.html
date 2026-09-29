@@ -81,14 +81,14 @@
   <div class="card">
     <h2>🍔 BurraBurger</h2>
 
-    <!-- PASO 1: Ingresar Nombre del Cliente -->
+    <!-- PASO 1: Nombre del Cliente -->
     <div id="paso1">
       <label for="nombreCliente">Nombre del Cliente:</label>
       <input type="text" id="nombreCliente" placeholder="Ej. Carlos Pérez" autocomplete="off">
       <button onclick="iniciarEscaneo()">Continuar a Escanear QR 📷</button>
     </div>
 
-    <!-- PASO 2: Escanear Tarjeta -->
+    <!-- PASO 2: Escaneo -->
     <div id="paso2" style="display: none;">
       <div id="infoClienteActivo" class="cliente-activo"></div>
       <p>Apunta la cámara al código QR de la tarjeta</p>
@@ -100,7 +100,7 @@
   </div>
 
   <script>
-    // ⚠️ REEMPLAZA ESTA URL CON TU LINK DESPLEGADO DE GOOGLE APPS SCRIPT
+    // ⚠️ ASEGÚRATE DE COLOCAR AQUÍ TU URL DESPLEGADA DE GOOGLE APPS SCRIPT
     const SCRIPT_URL = "https://script.google.com/macros/s/TU_SCRIPT_ID/exec";
 
     let html5QrcodeScanner = null;
@@ -117,55 +117,65 @@
 
       clienteNombreGlobal = nombreInput;
 
-      // Ocultar paso 1 y mostrar paso 2
       document.getElementById("paso1").style.display = "none";
       document.getElementById("paso2").style.display = "block";
       document.getElementById("infoClienteActivo").innerHTML = "👤 Registrando a: <strong>" + clienteNombreGlobal + "</strong>";
       document.getElementById("resultado").innerHTML = "";
 
-      // Iniciar la cámara para escanear
-      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-      html5QrcodeScanner.render(onScanSuccess);
+      escaneando = false;
+
+      // Iniciar el escáner
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+        fps: 10, 
+        qrbox: { width: 220, height: 220 } 
+      }, false);
+      
+      html5QrcodeScanner.render(onScanSuccess, onScanError);
     }
 
-    
-function onScanSuccess(decodedText, decodedResult) {
+    function onScanError(errorMessage) {
+      // Ignorar lecturas parciales mientras busca el código
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
       if (escaneando) return;
       escaneando = true;
 
-      document.getElementById("resultado").innerHTML = "⏳ Guardando en Google Sheets...";
+      document.getElementById("resultado").innerHTML = "⏳ Guardando información en Google Sheets...";
 
-      // Enviar datos usando la estructura que acepta Google Apps Script
-      const datos = new URLSearchParams();
-      datos.append("idTarjeta", decodedText.trim());
-      datos.append("nuevoNombre", clienteNombreGlobal.trim());
+      // Detener cámara inmediatamente para evitar parpadeos y lecturas múltiples
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().catch(err => console.error(err));
+      }
+
+      const payload = {
+        idTarjeta: decodedText.trim(),
+        nuevoNombre: clienteNombreGlobal.trim()
+      };
 
       fetch(SCRIPT_URL, {
         method: "POST",
-        body: datos
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
       })
-      .then(response => response.text())
-      .then(respuesta => {
+      .then(() => {
         document.getElementById("resultado").innerHTML = 
-          "✅ <strong>¡REGISTRADO EN HOJA!</strong><br>Cliente: " + clienteNombreGlobal + "<br>ID: " + decodedText;
-
-        if (html5QrcodeScanner) {
-          html5QrcodeScanner.clear();
-        }
+          "✅ <strong>¡REGISTRADO CON ÉXITO!</strong><br>Cliente: " + clienteNombreGlobal + "<br>Tarjeta ID: " + decodedText;
 
         setTimeout(() => {
           reiniciarPaso1();
-        }, 3000);
+        }, 3500);
       })
       .catch(err => {
-        document.getElementById("resultado").innerHTML = "❌ Error al conectar con Google Sheets.";
+        document.getElementById("resultado").innerHTML = "❌ Error al enviar datos. Intenta de nuevo.";
         escaneando = false;
       });
     }
-   
+
     function reiniciarPaso1() {
       if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear();
+        html5QrcodeScanner.clear().catch(e => {});
       }
       escaneando = false;
       document.getElementById("nombreCliente").value = "";
