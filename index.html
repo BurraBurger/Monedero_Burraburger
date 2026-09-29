@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner de Lealtad - Hamburguesas</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 15px; background-color: #f4f4f9; }
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; }
+        #resultado { margin-top: 20px; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; display: none; }
+        .exito { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { font-size: 14px; margin-top: 5px; font-weight: normal; }
+    </style>
+</head>
+<body>
+
+    <h2>🍔 Escáner de Monedero</h2>
+    <div id="reader"></div>
+    <div id="resultado"></div>
+
+    <script>
+        // PEGA AQUÍ LA URL QUE TE DIO APPS SCRIPT:
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2l8jo2lKD2_sS_mR7KAvEwyAGah1qk0ZZU6iCB0vHIXTgdITQinrpQVAQaa7yD4fsZw/exec"; 
+
+        let escaneando = false;
+
+        function onScanSuccess(decodedText) {
+            if (escaneando) return;
+            escaneando = true;
+
+            const divResultado = document.getElementById("resultado");
+            divResultado.style.display = "block";
+            divResultado.className = "info";
+            divResultado.innerHTML = "⏳ Procesando consumo para: " + decodedText + "...";
+
+            fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ idTarjeta: decodedText.trim() })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.exito) {
+                    divResultado.className = "exito";
+                    divResultado.innerHTML = `
+                        ${data.mensaje}<br>
+                        <div class="info">
+                            Cliente: <b>${data.cliente}</b><br>
+                            Nuevo Saldo: <b>$${data.nuevoSaldo} MXN</b><br>
+                            Quedan: <b>${data.hamburguesasRestantes} hamburguesas</b>
+                        </div>
+                    `;
+                } else {
+                    divResultado.className = "error";
+                    divResultado.innerHTML = data.mensaje;
+                }
+                setTimeout(() => { escaneando = false; }, 3000); // Espera 3 segundos antes de volver a escanear
+            })
+            .catch(err => {
+                divResultado.className = "error";
+                divResultado.innerHTML = "❌ Error de conexión al servidor.";
+                setTimeout(() => { escaneando = false; }, 3000);
+            });
+        }
+
+        const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } });
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
