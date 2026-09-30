@@ -101,7 +101,7 @@
 
   <script>
     // ⚠️ ASEGÚRATE DE COLOCAR AQUÍ TU URL DESPLEGADA DE GOOGLE APPS SCRIPT
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGSIZAplIAY9fUNzty-Zq5cfksHziBhWc2XjhFyxVauSEbdsLKxZV6FnDwWL8sq0Wo3Q/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkyXUATEbRHkrX6U9Qz8V0WpKiR1mqMn-mKqhJB-e7NWSUEExJthlaMu0eQj2mVTZnpQ/exec";
 
     let html5QrcodeScanner = null;
     let clienteNombreGlobal = "";
@@ -141,34 +141,30 @@
       if (escaneando) return;
       escaneando = true;
 
-      document.getElementById("resultado").innerHTML = "⏳ Guardando información en Google Sheets...";
+      document.getElementById("resultado").innerHTML = "⏳ Guardando en Google Sheets...";
 
-      // Detener cámara inmediatamente para evitar parpadeos y lecturas múltiples
       if (html5QrcodeScanner) {
         html5QrcodeScanner.clear().catch(err => console.error(err));
       }
 
-      const payload = {
-        idTarjeta: decodedText.trim(),
-        nuevoNombre: clienteNombreGlobal.trim()
-      };
+      const formData = new FormData();
+      formData.append("idTarjeta", decodedText.trim());
+      formData.append("nuevoNombre", clienteNombreGlobal.trim());
 
       fetch(SCRIPT_URL, {
         method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
+        body: formData
       })
       .then(() => {
         document.getElementById("resultado").innerHTML = 
-          "✅ <strong>¡REGISTRADO CON ÉXITO!</strong><br>Cliente: " + clienteNombreGlobal + "<br>Tarjeta ID: " + decodedText;
+          "✅ <strong>¡REGISTRADO EN HOJA!</strong><br>Cliente: " + clienteNombreGlobal + "<br>Tarjeta: " + decodedText;
 
         setTimeout(() => {
           reiniciarPaso1();
         }, 3500);
       })
       .catch(err => {
-        document.getElementById("resultado").innerHTML = "❌ Error al enviar datos. Intenta de nuevo.";
+        document.getElementById("resultado").innerHTML = "❌ Error al enviar datos.";
         escaneando = false;
       });
     }
