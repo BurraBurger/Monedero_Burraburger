@@ -147,15 +147,15 @@
       if (html5QrcodeScanner) {
         html5QrcodeScanner.clear().catch(err => console.error(err));
       }
+    const formData = new FormData();
+    formData.append("idTarjeta", decodedText.trim());
+    formData.append("nuevoNombre", clienteNombreGlobal.trim());
+    formData.append("token", TOKEN_APP); 
 
-      const formData = new FormData();
-      formData.append("idTarjeta", decodedText.trim());
-      formData.append("nuevoNombre", clienteNombreGlobal.trim());
-
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        body: formData
-      })
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      body: formData
+})
       .then(() => {
         document.getElementById("resultado").innerHTML = 
           "✅ <strong>¡REGISTRADO EN HOJA!</strong><br>Cliente: " + clienteNombreGlobal + "<br>Tarjeta: " + decodedText;
