@@ -93,16 +93,15 @@
       <div id="infoClienteActivo" class="cliente-activo"></div>
       <p>Apunta la cámara al código QR de la tarjeta</p>
       <div id="reader"></div>
-      <button onclick="reiniciarPaso1()" style="background: #757575; margin-top: 15px;">⬅️ Cambiar Nombre</button>
+      <button onclick="reiniciarPaso1()" style="background: #757575; margin-top: 15px;">⬅️️ Cambiar Nombre</button>
     </div>
 
     <div id="resultado"></div>
   </div>
 
   <script>
-    // ⚠️ ASEGÚRATE DE COLOCAR AQUÍ TU URL DESPLEGADA DE GOOGLE APPS SCRIPT
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby5oZ7ffj1WdXemPtJzlcn76Nm82g4WQMHy1qBqTiIyyd8qAeMTP7EOubU3yNHKS1GR/exec";
-    const TOKEN_APP = "BurraBurger2026_ClaveSegura"; // 👈 Debe coincidir letra por letra
+    const TOKEN_APP = "BurraBurger2026_ClaveSegura";
 
     let html5QrcodeScanner = null;
     let clienteNombreGlobal = "";
@@ -147,27 +146,35 @@
       if (html5QrcodeScanner) {
         html5QrcodeScanner.clear().catch(err => console.error(err));
       }
-    const formData = new FormData();
-    formData.append("idTarjeta", decodedText.trim());
-    formData.append("nuevoNombre", clienteNombreGlobal.trim());
-    formData.append("token", TOKEN_APP); 
 
-    fetch(SCRIPT_URL, {
-      method: "POST",
-      body: formData
-})
-      .then(() => {
-        document.getElementById("resultado").innerHTML = 
-          "✅ <strong>¡REGISTRADO EN HOJA!</strong><br>Cliente: " + clienteNombreGlobal + "<br>Tarjeta: " + decodedText;
-
-        setTimeout(() => {
-          reiniciarPaso1();
-        }, 3500);
-      })
-      .catch(err => {
-        document.getElementById("resultado").innerHTML = "❌ Error al enviar datos.";
-        escaneando = false;
+      // CONSTRUIR URL DE ENVÍO CON PARÁMETROS GET (Evita bloqueos de CORS y FormData en Apps Script)
+      const urlParams = new URLSearchParams({
+        idTarjeta: decodedText.trim(),
+        nuevoNombre: clienteNombreGlobal.trim(),
+        token: TOKEN_APP,
+        _t: new Date().getTime()
       });
+
+      const urlFinal = SCRIPT_URL + "?" + urlParams.toString();
+
+      fetch(urlFinal, { method: "GET" })
+        .then(response => response.text())
+        .then(respuestaTexto => {
+          if (respuestaTexto.includes("ACCESO DENEGADO") || respuestaTexto.includes("ERROR")) {
+            document.getElementById("resultado").innerHTML = "⚠️ " + respuestaTexto;
+          } else {
+            document.getElementById("resultado").innerHTML = 
+              "✅ <strong>¡REGISTRADO EN HOJA!</strong><br>" + respuestaTexto;
+          }
+
+          setTimeout(() => {
+            reiniciarPaso1();
+          }, 4000);
+        })
+        .catch(err => {
+          document.getElementById("resultado").innerHTML = "❌ Error de conexión al servidor.";
+          escaneando = false;
+        });
     }
 
     function reiniciarPaso1() {
